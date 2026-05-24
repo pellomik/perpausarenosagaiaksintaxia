@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="eu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mendiko txori polita – Zuhaitz Sintaktikoa</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Source Serif 4', Georgia, serif;
+  background: #faf9f6;
+  color: #1c1c1e;
+  padding: 14px 10px 10px;
+}
+
+header { text-align: center; margin-bottom: 10px; }
+header h2 {
+  font-size: 1em; font-weight: 600;
+  color: #1a237e; letter-spacing: 0.02em;
+}
+header p { font-size: 0.75em; color: #666; margin-top: 3px; font-style: italic; }
+
+#wrap {
+  position: relative;
+  width: 720px; height: 555px;
+  margin: 0 auto;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+
+svg#lines {
+  position: absolute; top: 0; left: 0;
+  width: 720px; height: 555px;
+  pointer-events: none;
+}
+
+.nd {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 10;
+}
+
+select {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72em; font-weight: 600;
+  padding: 3px 4px;
+  border: 2px dashed #bdbdbd; border-radius: 5px;
+  background: #fffde7; color: #37474f;
+  cursor: pointer; min-width: 92px;
+  transition: border-color 0.2s, background 0.2s;
+}
+select:focus { outline: none; border-color: #3949ab; border-style: solid; }
+select:hover { border-color: #9e9e9e; }
+
+.word {
+  display: block;
+  font-family: 'Source Serif 4', serif;
+  font-style: italic; font-size: 0.74em;
+  color: #555; margin-top: 2px;
+}
+.sublabel {
+  display: block; font-size: 0.65em;
+  color: #999; font-family: 'JetBrains Mono', monospace;
+}
+
+.nd.ok select { border-color: #2e7d32; border-style: solid; background: #e8f5e9; color: #1b5e20; }
+.nd.err select { border-color: #c62828; border-style: solid; background: #ffebee; color: #7f0000; }
+
+#bar {
+  width: 720px; margin: 8px auto 0;
+  display: flex; gap: 8px; align-items: center;
+  justify-content: center; flex-wrap: wrap;
+}
+button {
+  padding: 6px 18px; border: none; border-radius: 6px;
+  font-size: 0.82em; font-family: 'Source Serif 4', serif;
+  cursor: pointer; transition: opacity 0.15s; letter-spacing: 0.02em;
+}
+button:hover { opacity: 0.85; }
+#bcheck { background: #1a237e; color: #fff; }
+#breset { background: #546e7a; color: #fff; }
+#bshow  { background: #4a148c; color: #fff; }
+#bresult {
+  font-size: 0.82em; font-weight: 600;
+  color: #1a237e; font-family: 'JetBrains Mono', monospace;
+}
+
+#legend {
+  width: 720px; margin: 6px auto 0;
+  font-size: 0.68em; color: #888;
+  text-align: center; font-style: italic;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h2>«Mendiko txori polita» — IS-aren egitura sintaktikoa</h2>
+  <p>Aukeratu kategoria gramatikala goitibeherako menu bakoitzean eta egiaztatu erantzunak</p>
+</header>
+
+<div id="wrap">
+  <svg id="lines"></svg>
+</div>
+
+<div id="bar">
+  <button id="bcheck">✓ Zuzendu</button>
+  <button id="breset">↺ Berrabiatu</button>
+  <button id="bshow">👁 Erantzunak</button>
+  <span id="bresult"></span>
+</div>
+
+<p id="legend">
+  IS = Izen Sintagma &nbsp;|&nbsp; IM = Izen Multzoa &nbsp;|&nbsp; I = Izena &nbsp;|&nbsp;
+  Det = Determinatzailea &nbsp;|&nbsp; Erl = Erlazio Marka &nbsp;|&nbsp; Izenondoa = adjektiboa
+</p>
+
+<script>
+const OPTS = ['---', 'IS', 'IM', 'I', 'Det', 'Erl', 'Izenlaguna', 'Izenondoa'];
+
+// Tree structure for "mendiko txori polita"
+//
+//              IS (Nor)
+//             /        \
+//           IS          Erl(∅)
+//          /    \
+//        IM     Det(-a)
+//       / | \
+//      IL  I   Izenondoa
+//     / \ txori   polit
+//   IS  Erl(-ko)
+//   / \
+//  IM  Det(-a)
+//  |
+//  I (mendi)
+
+const nodes = [
+  // Level 0 – root
+  { id:'n0',  x:499, y:42,  ans:'IS',          sublabel:'(Nor)' },
+
+  // Level 1
+  { id:'n1',  x:385, y:118, ans:'IS' },
+  { id:'n2',  x:612, y:118, ans:'Erl',          word:'∅' },
+
+  // Level 2 – under IS(n1)
+  { id:'n3',  x:302, y:198, ans:'IM' },
+  { id:'n4',  x:468, y:198, ans:'Det',          word:'–a' },
+
+  // Level 3 – under IM(n3)
+  { id:'n5',  x:178, y:278, ans:'Izenlaguna' },
+  { id:'n6',  x:312, y:278, ans:'I',            word:'txori' },
+  { id:'n7',  x:435, y:278, ans:'Izenondoa',    word:'polit' },
+
+  // Level 4 – under Izenlaguna(n5)
+  { id:'n8',  x:118, y:358, ans:'IS' },
+  { id:'n9',  x:240, y:358, ans:'Erl',          word:'–ko' },
+
+  // Level 5 – under IS(n8)
+  { id:'n10', x:68,  y:433, ans:'IM' },
+  { id:'n11', x:175, y:433, ans:'Det',          word:'–a' },
+
+  // Level 6 – under IM(n10)
+  { id:'n12', x:68,  y:510, ans:'I',            word:'mendi' },
+];
+
+const edges = [
+  ['n0','n1'], ['n0','n2'],
+  ['n1','n3'], ['n1','n4'],
+  ['n3','n5'], ['n3','n6'], ['n3','n7'],
+  ['n5','n8'], ['n5','n9'],
+  ['n8','n10'], ['n8','n11'],
+  ['n10','n12'],
+];
+
+// ── Build DOM nodes ───────────────────────────────────────────────────────────
+const wrap    = document.getElementById('wrap');
+const svgEl   = document.getElementById('lines');
+const nodeMap = {};
+
+nodes.forEach(n => {
+  const div = document.createElement('div');
+  div.className = 'nd';
+  div.id = n.id;
+  div.style.left = n.x + 'px';
+  div.style.top  = n.y + 'px';
+
+  const sel = document.createElement('select');
+  sel.dataset.ans = n.ans;
+  OPTS.forEach(o => {
+    const opt = document.createElement('option');
+    opt.value = o === '---' ? '' : o;
+    opt.textContent = o;
+    sel.appendChild(opt);
+  });
+  div.appendChild(sel);
+
+  if (n.sublabel) {
+    const s = document.createElement('span');
+    s.className = 'sublabel';
+    s.textContent = n.sublabel;
+    div.appendChild(s);
+  }
+  if (n.word) {
+    const w = document.createElement('span');
+    w.className = 'word';
+    w.textContent = n.word;
+    div.appendChild(w);
+  }
+
+  wrap.appendChild(div);
+  nodeMap[n.id] = n;
+});
+
+// ── Draw SVG lines ────────────────────────────────────────────────────────────
+function drawLines() {
+  svgEl.innerHTML = '';
+  edges.forEach(([pid, cid]) => {
+    const p = nodeMap[pid];
+    const c = nodeMap[cid];
+    const pH = 13 + (p.word ? 16 : 0) + (p.sublabel ? 14 : 0);
+    const cH = 13 + (c.word ? 16 : 0) + (c.sublabel ? 14 : 0);
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', p.x); line.setAttribute('y1', p.y + pH);
+    line.setAttribute('x2', c.x); line.setAttribute('y2', c.y - cH);
+    line.setAttribute('stroke', '#b0bec5');
+    line.setAttribute('stroke-width', '1.6');
+    line.setAttribute('stroke-linecap', 'round');
+    svgEl.appendChild(line);
+  });
+}
+drawLines();
+
+// ── Check answers ─────────────────────────────────────────────────────────────
+document.getElementById('bcheck').addEventListener('click', () => {
+  let ok = 0, tot = 0;
+  document.querySelectorAll('.nd').forEach(div => {
+    const sel = div.querySelector('select');
+    if (!sel) return;
+    tot++;
+    div.classList.remove('ok', 'err');
+    if (sel.value === sel.dataset.ans) { div.classList.add('ok'); ok++; }
+    else div.classList.add('err');
+  });
+  const pct   = Math.round(ok / tot * 100);
+  const emoji = ok === tot ? ' 🎉' : ok >= tot * 0.7 ? ' 👍' : '';
+  document.getElementById('bresult').textContent = `${ok}/${tot} zuzen (${pct}%)${emoji}`;
+});
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+document.getElementById('breset').addEventListener('click', () => {
+  document.querySelectorAll('.nd select').forEach(s => { s.value = ''; });
+  document.querySelectorAll('.nd').forEach(d => d.classList.remove('ok', 'err'));
+  document.getElementById('bresult').textContent = '';
+});
+
+// ── Show answers ──────────────────────────────────────────────────────────────
+document.getElementById('bshow').addEventListener('click', () => {
+  document.querySelectorAll('.nd select').forEach(sel => {
+    sel.value = sel.dataset.ans;
+    sel.closest('.nd').classList.remove('err');
+    sel.closest('.nd').classList.add('ok');
+  });
+  document.getElementById('bresult').textContent = 'Erantzunak erakutsita';
+});
+</script>
+</body>
+</html>
