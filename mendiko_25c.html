@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="eu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>25c – P perpaus osoa</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Source Serif 4',Georgia,serif;background:#faf9f6;color:#1c1c1e;padding:14px 10px 10px}
+header{text-align:center;margin-bottom:10px}
+header h2{font-size:1em;font-weight:600;color:#1a237e;letter-spacing:.02em}
+header p{font-size:.75em;color:#666;margin-top:3px;font-style:italic}
+#wrap{position:relative;width:800px;height:390px;margin:0 auto;background:white;border:1px solid #e0e0e0;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.07)}
+svg#lines{position:absolute;top:0;left:0;width:800px;height:390px;pointer-events:none}
+.nd{position:absolute;transform:translate(-50%,-50%);text-align:center;z-index:10}
+select{font-family:'JetBrains Mono',monospace;font-size:.72em;font-weight:600;padding:3px 4px;border:2px dashed #bdbdbd;border-radius:5px;background:#fffde7;color:#37474f;cursor:pointer;min-width:92px;transition:border-color .2s,background .2s}
+select:focus{outline:none;border-color:#3949ab;border-style:solid}
+select:hover{border-color:#9e9e9e}
+.word{display:block;font-family:'Source Serif 4',serif;font-style:italic;font-size:.74em;color:#555;margin-top:2px}
+.sublabel{display:block;font-size:.65em;color:#999;font-family:'JetBrains Mono',monospace}
+.nd.ok select{border-color:#2e7d32;border-style:solid;background:#e8f5e9;color:#1b5e20}
+.nd.err select{border-color:#c62828;border-style:solid;background:#ffebee;color:#7f0000}
+/* Fixed leaf nodes */
+.nd.fixed-leaf span.leaf-text{
+  font-family:'Source Serif 4',serif;font-style:italic;font-size:.75em;
+  color:#1a237e;font-weight:600;padding:4px 7px;
+  background:#e8eaf6;border-radius:5px;border:1px solid #c5cae9;
+  white-space:nowrap;display:inline-block;
+}
+#bar{width:800px;margin:8px auto 0;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
+button{padding:6px 18px;border:none;border-radius:6px;font-size:.82em;font-family:'Source Serif 4',serif;cursor:pointer;transition:opacity .15s;letter-spacing:.02em}
+button:hover{opacity:.85}
+#bcheck{background:#1a237e;color:#fff}
+#breset{background:#546e7a;color:#fff}
+#bshow{background:#4a148c;color:#fff}
+#bresult{font-size:.82em;font-weight:600;color:#1a237e;font-family:'JetBrains Mono',monospace}
+#legend{width:800px;margin:6px auto 0;font-size:.68em;color:#888;text-align:center;font-style:italic}
+</style>
+</head>
+<body>
+<header>
+  <h2>«Mendiko txori polita alai etorri zaigu lagunei zuhaitzetik» — P (perpausa) egitura orokorra</h2>
+  <p>Aukeratu kategoria gramatikala goitibeherako menu bakoitzean eta egiaztatu erantzunak</p>
+</header>
+<div id="wrap"><svg id="lines"></svg></div>
+<div id="bar">
+  <button id="bcheck">✓ Zuzendu</button>
+  <button id="breset">↺ Berrabiatu</button>
+  <button id="bshow">👁 Erantzunak</button>
+  <span id="bresult"></span>
+</div>
+<p id="legend">P = Perpausa &nbsp;|&nbsp; IS = Izen Sintagma &nbsp;|&nbsp; AS = Aditz Sintagma &nbsp;|&nbsp; A = Aditza &nbsp;|&nbsp; AN = Aditz Nagusia &nbsp;|&nbsp; AL = Aditz Laguntzailea &nbsp;|&nbsp; Aditzondoa &nbsp;|&nbsp; Adizlaguna</p>
+<script>
+const OPTS=['---','P','IS','AS','Aditzondoa','A','AN','AL','Adizlaguna'];
+
+// Dropdown nodes
+const nodes=[
+  {id:'n0', x:400, y:42,  ans:'P'},
+  {id:'n1', x:165, y:125, ans:'IS',  sublabel:'(Nor)'},
+  {id:'n2', x:560, y:125, ans:'AS'},
+  {id:'n3', x:355, y:215, ans:'Aditzondoa', word:'alai'},
+  {id:'n4', x:462, y:215, ans:'A'},
+  {id:'n5', x:572, y:215, ans:'IS',  sublabel:'(Nori)', word:'lagunei'},
+  {id:'n6', x:692, y:215, ans:'Adizlaguna', word:'zuhaitzetik'},
+  {id:'n7', x:430, y:308, ans:'AN',  word:'etorri'},
+  {id:'n8', x:500, y:308, ans:'AL',  word:'zaigu'},
+];
+
+// Fixed (non-graded) leaf nodes
+const fixedNodes=[
+  {id:'f1', x:165, y:215, text:'mendiko txori polita', parentId:'n1'},
+];
+
+const edges=[
+  ['n0','n1'],['n0','n2'],
+  ['n1','f1'],
+  ['n2','n3'],['n2','n4'],['n2','n5'],['n2','n6'],
+  ['n4','n7'],['n4','n8'],
+];
+
+const wrap=document.getElementById('wrap');
+const svgEl=document.getElementById('lines');
+const nodeMap={};
+
+// Build dropdown nodes
+nodes.forEach(n=>{
+  const div=document.createElement('div');
+  div.className='nd'; div.id=n.id;
+  div.style.left=n.x+'px'; div.style.top=n.y+'px';
+  const sel=document.createElement('select');
+  sel.dataset.ans=n.ans;
+  OPTS.forEach(o=>{
+    const opt=document.createElement('option');
+    opt.value=o==='---'?'':o; opt.textContent=o;
+    sel.appendChild(opt);
+  });
+  div.appendChild(sel);
+  if(n.sublabel){const s=document.createElement('span');s.className='sublabel';s.textContent=n.sublabel;div.appendChild(s);}
+  if(n.word){const w=document.createElement('span');w.className='word';w.textContent=n.word;div.appendChild(w);}
+  wrap.appendChild(div);
+  nodeMap[n.id]={...n, isFixed:false};
+});
+
+// Build fixed leaf nodes
+fixedNodes.forEach(n=>{
+  const div=document.createElement('div');
+  div.className='nd fixed-leaf'; div.id=n.id;
+  div.style.left=n.x+'px'; div.style.top=n.y+'px';
+  const span=document.createElement('span');
+  span.className='leaf-text'; span.textContent=n.text;
+  div.appendChild(span);
+  wrap.appendChild(div);
+  nodeMap[n.id]={...n, isFixed:true, word:n.text};
+});
+
+function drawLines(){
+  svgEl.innerHTML='';
+  edges.forEach(([pid,cid])=>{
+    const p=nodeMap[pid],c=nodeMap[cid];
+    const pH=p.isFixed?12:13+(p.word?16:0)+(p.sublabel?14:0);
+    const cH=c.isFixed?12:13+(c.word?16:0)+(c.sublabel?14:0);
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',p.x);line.setAttribute('y1',p.y+pH);
+    line.setAttribute('x2',c.x);line.setAttribute('y2',c.y-cH);
+    line.setAttribute('stroke','#b0bec5');line.setAttribute('stroke-width','1.6');line.setAttribute('stroke-linecap','round');
+    svgEl.appendChild(line);
+  });
+}
+drawLines();
+
+document.getElementById('bcheck').addEventListener('click',()=>{
+  let ok=0,tot=0;
+  document.querySelectorAll('.nd:not(.fixed-leaf)').forEach(div=>{
+    const sel=div.querySelector('select');if(!sel)return;tot++;
+    div.classList.remove('ok','err');
+    if(sel.value===sel.dataset.ans){div.classList.add('ok');ok++;}else div.classList.add('err');
+  });
+  const pct=Math.round(ok/tot*100);
+  const emoji=ok===tot?' 🎉':ok>=tot*.7?' 👍':'';
+  document.getElementById('bresult').textContent=`${ok}/${tot} zuzen (${pct}%)${emoji}`;
+});
+document.getElementById('breset').addEventListener('click',()=>{
+  document.querySelectorAll('.nd select').forEach(s=>{s.value='';});
+  document.querySelectorAll('.nd').forEach(d=>d.classList.remove('ok','err'));
+  document.getElementById('bresult').textContent='';
+});
+document.getElementById('bshow').addEventListener('click',()=>{
+  document.querySelectorAll('.nd:not(.fixed-leaf) select').forEach(sel=>{
+    sel.value=sel.dataset.ans;
+    sel.closest('.nd').classList.remove('err');sel.closest('.nd').classList.add('ok');
+  });
+  document.getElementById('bresult').textContent='Erantzunak erakutsita';
+});
+</script>
+</body>
+</html>
