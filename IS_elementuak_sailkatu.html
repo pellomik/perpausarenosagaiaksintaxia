@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="eu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Izen sintagmako elementuak sailkatu</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Source Serif 4',Georgia,serif;background:#faf9f6;color:#1c1c1e;padding:16px 14px}
+
+header{text-align:center;margin-bottom:16px}
+header h2{font-size:1.05em;font-weight:600;color:#1a237e}
+header p{font-size:.76em;color:#666;margin-top:4px;font-style:italic}
+
+.esaldia-bloke{
+  background:white;border:1px solid #ddd;border-radius:10px;
+  padding:14px 16px;margin-bottom:14px;
+  box-shadow:0 1px 6px rgba(0,0,0,.06)
+}
+.esaldia-bloke h3{
+  font-size:.78em;font-weight:600;color:#546e7a;
+  margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em
+}
+.esaldia-testua{
+  font-size:1em;margin-bottom:12px;line-height:1.6
+}
+.esaldia-testua u{
+  text-decoration:underline;font-weight:600;color:#1a237e
+}
+
+table{width:100%;border-collapse:collapse;font-size:.82em}
+thead tr{background:#e8eaf6}
+thead th{
+  padding:6px 8px;text-align:left;
+  font-family:'JetBrains Mono',monospace;font-size:.78em;
+  font-weight:600;color:#3949ab;border-bottom:2px solid #c5cae9
+}
+tbody tr{border-bottom:1px solid #f0f0f0}
+tbody tr:last-child{border-bottom:none}
+td{padding:6px 8px;vertical-align:middle}
+td.hitza{
+  font-family:'JetBrains Mono',monospace;font-weight:600;
+  color:#1a237e;font-size:.85em;white-space:nowrap
+}
+
+select{
+  font-family:'JetBrains Mono',monospace;font-size:.72em;font-weight:600;
+  padding:3px 4px;border:2px dashed #bdbdbd;border-radius:5px;
+  background:#fffde7;color:#37474f;cursor:pointer;width:100%;
+  transition:border-color .2s,background .2s
+}
+select:focus{outline:none;border-color:#3949ab;border-style:solid}
+select:hover{border-color:#9e9e9e}
+select.ok{border-color:#2e7d32;border-style:solid;background:#e8f5e9;color:#1b5e20}
+select.err{border-color:#c62828;border-style:solid;background:#ffebee;color:#7f0000}
+
+#bar{
+  display:flex;gap:8px;align-items:center;
+  justify-content:center;flex-wrap:wrap;margin-top:6px
+}
+button{
+  padding:7px 20px;border:none;border-radius:6px;
+  font-size:.84em;font-family:'Source Serif 4',serif;
+  cursor:pointer;transition:opacity .15s;letter-spacing:.02em
+}
+button:hover{opacity:.85}
+#bcheck{background:#1a237e;color:#fff}
+#breset{background:#546e7a;color:#fff}
+#bshow{background:#4a148c;color:#fff}
+#bresult{font-size:.84em;font-weight:600;color:#1a237e;font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+
+<header>
+  <h2>Izen sintagmako elementuak ezaugarritu</h2>
+  <p>Aukeratu azpimarratutako hitz bakoitzaren kategoria nagusia eta azpikategoria</p>
+</header>
+
+<div id="galderak"></div>
+
+<div id="bar">
+  <button id="bcheck">✓ Zuzendu</button>
+  <button id="breset">↺ Berrabiatu</button>
+  <button id="bshow">👁 Erantzunak</button>
+  <span id="bresult"></span>
+</div>
+
+<script>
+const KAT = ['---','Izena','Izenordaina','Determinatzailea','Adjektiboa','Adberbioa'];
+
+const AZPI = {
+  '': ['---'],
+  'Izena': ['---','izen berezia','izen arrunta — biziduna, zenbakarria','izen arrunta — biziduna, zenbakaitza','izen arrunta — bizigabea, zenbakarria','izen arrunta — bizigabea, zenbakaitza'],
+  'Izenordaina': ['---','pertsonal arrunta','pertsonal indartua','zehaztugabe galdetzailea','zehaztugabe mugagabea','bihurkaria','elkarkaria'],
+  'Determinatzailea': ['---','mugatzaile artikulua','mugatzaile erakuslea','zenbatzaile zehaztua','zenbatzaile zehaztugabea','zenbatzaile orokorra','nolakotzailea'],
+  'Adjektiboa': ['---','izenlaguna','izenondoa'],
+  'Adberbioa': ['---','leku adberbioa','denbora adberbioa','modu adberbioa'],
+};
+
+// esaldiak: testua HTML moduan + hitz bakoitzarentzat [hitza_bistaratzeko, kat_zuzena, azpi_zuzena]
+const ESALDIAK = [
+  {
+    n: 1,
+    testua: '<u>Bost</u> <u>lagun</u> etorri zaizkio.',
+    hitzak: [
+      { h:'Bost',  kat:'Determinatzailea', azpi:'zenbatzaile zehaztua' },
+      { h:'lagun', kat:'Izena',            azpi:'izen arrunta — biziduna, zenbakarria' },
+    ]
+  },
+  {
+    n: 2,
+    testua: 'Sagar <u>ustel</u> <u>asko</u> eman digu dendariak.',
+    hitzak: [
+      { h:'ustel', kat:'Adjektiboa',       azpi:'izenondoa' },
+      { h:'asko',  kat:'Determinatzailea', azpi:'zenbatzaile zehaztugabea' },
+    ]
+  },
+  {
+    n: 3,
+    testua: '<u>Nire</u> amak etxe <u>guztia</u> miatu du.',
+    hitzak: [
+      { h:'Nire',   kat:'Adjektiboa',       azpi:'izenlaguna' },
+      { h:'guztia', kat:'Determinatzailea', azpi:'zenbatzaile orokorra' },
+    ]
+  },
+  {
+    n: 4,
+    testua: '<u>Zure</u> lagun <u>batek</u> gezurra esan digu.',
+    hitzak: [
+      { h:'Zure',  kat:'Adjektiboa',       azpi:'izenlaguna' },
+      { h:'batek', kat:'Determinatzailea', azpi:'zenbatzaile zehaztua' },
+    ]
+  },
+  {
+    n: 5,
+    testua: 'Ikasle <u>batzuek</u> beldurra diote irakasleari.',
+    hitzak: [
+      { h:'batzuek', kat:'Determinatzailea', azpi:'zenbatzaile zehaztugabea' },
+    ]
+  },
+];
+
+const container = document.getElementById('galderak');
+const allSelects = []; // [{katSel, azpiSel, kat, azpi}]
+
+ESALDIAK.forEach(es => {
+  const bloke = document.createElement('div');
+  bloke.className = 'esaldia-bloke';
+
+  const tit = document.createElement('h3');
+  tit.textContent = es.n + '. esaldia';
+  bloke.appendChild(tit);
+
+  const testua = document.createElement('p');
+  testua.className = 'esaldia-testua';
+  testua.innerHTML = es.testua;
+  bloke.appendChild(testua);
+
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>Hitza</th><th>Kategoria nagusia</th><th>Azpikategoria</th></tr>';
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+
+  es.hitzak.forEach(hw => {
+    const tr = document.createElement('tr');
+
+    // Hitza
+    const tdH = document.createElement('td');
+    tdH.className = 'hitza';
+    tdH.textContent = hw.h;
+    tr.appendChild(tdH);
+
+    // Kategoria nagusia
+    const tdK = document.createElement('td');
+    const katSel = document.createElement('select');
+    katSel.dataset.ans = hw.kat;
+    KAT.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o === '---' ? '' : o;
+      opt.textContent = o;
+      katSel.appendChild(opt);
+    });
+
+    // Azpikategoria (dinamikoa)
+    const tdA = document.createElement('td');
+    const azpiSel = document.createElement('select');
+    azpiSel.dataset.ans = hw.azpi;
+
+    function updateAzpi(katVal) {
+      azpiSel.innerHTML = '';
+      const opts = AZPI[katVal] || AZPI[''];
+      opts.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o === '---' ? '' : o;
+        opt.textContent = o;
+        azpiSel.appendChild(opt);
+      });
+    }
+    updateAzpi('');
+    katSel.addEventListener('change', () => {
+      updateAzpi(katSel.value);
+      katSel.classList.remove('ok','err');
+      azpiSel.classList.remove('ok','err');
+    });
+
+    tdK.appendChild(katSel);
+    tdA.appendChild(azpiSel);
+    tr.appendChild(tdK);
+    tr.appendChild(tdA);
+    tbody.appendChild(tr);
+
+    allSelects.push({ katSel, azpiSel, kat: hw.kat, azpi: hw.azpi });
+  });
+
+  table.appendChild(tbody);
+  bloke.appendChild(table);
+  container.appendChild(bloke);
+});
+
+document.getElementById('bcheck').addEventListener('click', () => {
+  let ok = 0, tot = 0;
+  allSelects.forEach(({katSel, azpiSel, kat, azpi}) => {
+    katSel.classList.remove('ok','err');
+    azpiSel.classList.remove('ok','err');
+    const katOk = katSel.value === kat;
+    const azpiOk = azpiSel.value === azpi;
+    katSel.classList.add(katOk ? 'ok' : 'err');
+    azpiSel.classList.add(azpiOk ? 'ok' : 'err');
+    if(katOk) ok++;
+    if(azpiOk) ok++;
+    tot += 2;
+  });
+  const pct = Math.round(ok/tot*100);
+  const emoji = ok===tot?' 🎉':ok>=tot*.7?' 👍':'';
+  document.getElementById('bresult').textContent = `${ok}/${tot} zuzen (${pct}%)${emoji}`;
+});
+
+document.getElementById('breset').addEventListener('click', () => {
+  allSelects.forEach(({katSel, azpiSel}) => {
+    katSel.value = '';
+    katSel.classList.remove('ok','err');
+    azpiSel.innerHTML = '';
+    const opt = document.createElement('option');
+    opt.value=''; opt.textContent='---';
+    azpiSel.appendChild(opt);
+    azpiSel.classList.remove('ok','err');
+  });
+  document.getElementById('bresult').textContent = '';
+});
+
+document.getElementById('bshow').addEventListener('click', () => {
+  allSelects.forEach(({katSel, azpiSel, kat, azpi}) => {
+    katSel.value = kat;
+    katSel.classList.remove('err'); katSel.classList.add('ok');
+    // Azpikategoria eguneratu
+    const opts = AZPI[kat] || [];
+    azpiSel.innerHTML = '';
+    opts.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o === '---' ? '' : o;
+      opt.textContent = o;
+      azpiSel.appendChild(opt);
+    });
+    azpiSel.value = azpi;
+    azpiSel.classList.remove('err'); azpiSel.classList.add('ok');
+  });
+  document.getElementById('bresult').textContent = 'Erantzunak erakutsita';
+});
+</script>
+</body>
+</html>
